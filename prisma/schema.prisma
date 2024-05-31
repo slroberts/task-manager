@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   Int                   @id @default(autoincrement())
+  email                String                @unique
+  password             String
+  createdProjects      Project[]             @relation("CreatedBy")
+  collaboratedProjects CollaboratedProject[] @relation("User")
+  projects             Project[]             @relation("ProjectMembers")
+  teams                Team[]                @relation("TeamMembers")
+  tasks                Task[]                @relation("AssignedUsers")
+  comments             Comment[]             @relation("UserComments")
+}
+
+model Project {
+  id                   Int                   @id @default(autoincrement())
+  title                String
+  description          String
+  createdById          Int
+  createdBy            User                  @relation("CreatedBy", fields: [createdById], references: [id])
+  members              User[]                @relation("ProjectMembers")
+  tasks                Task[]                @relation("ProjectTasks")
+  labels               Label[]               @relation("ProjectLabels")
+  dueDates             DateTime
+  attachments          String
+  collaboratedProjects CollaboratedProject[] @relation("ProjectCollaborations")
+}
+
+enum Permission {
+  ADMIN
+  READ_ONLY
+  NULL
+}
+
+model CollaboratedProject {
+  id          Int        @id @default(autoincrement())
+  userId      Int
+  projectId   Int
+  user        User       @relation("User", fields: [userId], references: [id])
+  project     Project    @relation("ProjectCollaborations", fields: [projectId], references: [id])
+  permissions Permission @default(ADMIN)
+}
+
+model Team {
+  id      Int      @id @default(autoincrement())
+  name    String
+  members User[]   @relation("TeamMembers")
+  tasks   Task[]   @relation("TeamTasks")
+}
+
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Status {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+model Task {
+  id            Int          @id @default(autoincrement())
+  title         String
+  description   String
+  dueDate       DateTime
+  priorityLevel PriorityLevel @default(MEDIUM)
+  status        Status        @default(TODO)
+  subtasks      Subtask[]     @relation("TaskSubtasks")
+  attachments   String
+  labels        Label[]       @relation("TaskLabels")
+  comments      Comment[]     @relation("TaskComments")
+  assignedUsers User[]        @relation("AssignedUsers")
+  projectId     Int
+  project       Project       @relation("ProjectTasks", fields: [projectId], references: [id])
+  teams         Team[]        @relation("TeamTasks")
+  categories    Category[]    @relation("TaskCategories")
+}
+
+model Subtask {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  dueDate     DateTime
+  status      String
+  taskId      Int
+  task        Task     @relation("TaskSubtasks", fields: [taskId], references: [id])
+}
+
+model Category {
+  id      Int      @id @default(autoincrement())
+  name    String
+  tasks   Task[]   @relation("TaskCategories")
+}
+
+enum Color {
+  RED
+  BLUE
+  GREEN
+  YELLOW
+  PURPLE
+  ORANGE
+  PINK
+  GREY
+}
+
+model Label {
+  id       Int      @id @default(autoincrement())
+  name     String
+  color    Color    @default(GREY)
+  tasks    Task[]   @relation("TaskLabels")
+  projects Project[] @relation("ProjectLabels")
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  text      String
+  userId    Int
+  user      User     @relation("UserComments", fields: [userId], references: [id])
+  taskId    Int
+  task      Task     @relation("TaskComments", fields: [taskId], references: [id])
+  timestamp DateTime
+}
